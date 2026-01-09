@@ -34,6 +34,15 @@ python -m pip install -r requirements.txt
 python run.py
 ```
 
+### Windows (Git Bash / MSYS2 bash)
+
+```bash
+py -m venv .venv
+source .venv/Scripts/activate
+python -m pip install -r requirements.txt
+python run.py
+```
+
 ### macOS / Linux
 
 ```bash
