@@ -54,6 +54,16 @@ python3 run.py
 
 Then open the Streamlit URL printed in the terminal.
 
+### Desktop shortcut (Windows)
+
+If you want a “double click to launch” experience on Windows:
+
+- Double-click `start_windows.bat` from the project folder, **or**
+- Create a Desktop shortcut to `start_windows.bat`:
+  - Right click `start_windows.bat` → **Show more options** → **Send to** → **Desktop (create shortcut)**
+
+The script will create/use `.venv`, install requirements, and start the app at `http://localhost:8501`.
+
 ### How the model works (high level)
 
 - **Electrode capacity** is computed from:
