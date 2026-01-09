@@ -6,9 +6,11 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from battery_tool.cad import EnclosureSpec, build_pack_scene_mm, export_scene_obj_bytes, export_scene_stl_bytes
+from battery_tool.drawings import DrawingSpec, export_top_view_dxf_bytes, export_top_view_svg
 from battery_tool.geometry import compute_pack_bounds_mm
 from battery_tool.models import CellSpec, PackConfig, PackElectrical
-from battery_tool.plotting import config_to_json, pack_3d_figure
+from battery_tool.plotting import config_to_json, pack_3d_cad_figure, pack_3d_figure
 from battery_tool.simulate import simulate_constant_current_discharge
 
 
@@ -98,6 +100,14 @@ with st.sidebar:
     spacing_mm = st.number_input("Spacing between cells (mm)", 0.0, 50.0, 2.0, 0.5)
 
     st.divider()
+    st.header("CAD / geometry")
+    view_mode = st.selectbox("3D view mode", ["CAD solids", "Schematic"], index=0)
+    include_enclosure = st.checkbox("Include enclosure (outer block)", value=True)
+    enclosure_clearance_mm = st.number_input("Enclosure clearance (mm)", 0.0, 50.0, 2.0, 0.5)
+    enclosure_wall_mm = st.number_input("Enclosure wall thickness (mm)", 0.0, 50.0, 2.0, 0.5)
+    mesh_sections = st.slider("Cylinder smoothness", 8, 64, 28, 2)
+
+    st.divider()
     st.header("Use / load simulation")
     current_a = st.number_input("Constant current draw (A)", 0.1, 10000.0, 20.0, 0.5)
     initial_soc = st.slider("Initial SOC", 0.0, 1.0, 1.0, 0.01)
@@ -154,8 +164,19 @@ col_a, col_b, col_c = st.columns([1.15, 1.15, 1.0], gap="large")
 
 with col_a:
     st.subheader("3D pack layout")
-    highlight_n = min(cfg.cell_count, cfg.capacity_slots)
-    fig3d = pack_3d_figure(cell, cfg, highlight_n=highlight_n)
+    if view_mode == "CAD solids":
+        fig3d = pack_3d_cad_figure(
+            cell,
+            cfg,
+            include_enclosure=include_enclosure,
+            enclosure_clearance_mm=float(enclosure_clearance_mm),
+            enclosure_wall_mm=float(enclosure_wall_mm),
+            mesh_sections=int(mesh_sections),
+        )
+    else:
+        highlight_n = min(cfg.cell_count, cfg.capacity_slots)
+        fig3d = pack_3d_figure(cell, cfg, highlight_n=highlight_n)
+
     st.plotly_chart(fig3d, width="stretch")
 
 with col_b:
@@ -199,8 +220,71 @@ with col_b:
     )
 
 with col_c:
-    st.subheader("Configuration export")
-    st.code(config_to_json(cell, cfg), language="json")
+    st.subheader("CAD exports (2D + 3D)")
+
+    export_name = f"{cell.name.replace(' ', '_')}_{cfg.series_s}S{cfg.parallel_p}P"
+    enclosure_spec = EnclosureSpec(
+        include=bool(include_enclosure),
+        clearance_mm=float(enclosure_clearance_mm),
+        wall_mm=float(enclosure_wall_mm),
+    )
+    drawing_spec = DrawingSpec(
+        include_enclosure_outline=bool(include_enclosure),
+        enclosure_clearance_mm=float(enclosure_clearance_mm),
+        enclosure_wall_mm=float(enclosure_wall_mm),
+    )
+
+    @st.cache_data(show_spinner=False)
+    def _exports(
+        _cell: CellSpec,
+        _cfg: PackConfig,
+        _enclosure: EnclosureSpec,
+        _mesh_sections: int,
+        _drawing: DrawingSpec,
+    ) -> dict[str, bytes | str]:
+        scene = build_pack_scene_mm(_cell, _cfg, sections=int(_mesh_sections), enclosure=_enclosure)
+        return {
+            "config_json": config_to_json(_cell, _cfg),
+            "stl": export_scene_stl_bytes(scene),
+            "obj": export_scene_obj_bytes(scene),
+            "svg_top": export_top_view_svg(_cell, _cfg, spec=_drawing),
+            "dxf_top": export_top_view_dxf_bytes(_cell, _cfg, spec=_drawing),
+        }
+
+    exp = _exports(cell, cfg, enclosure_spec, int(mesh_sections), drawing_spec)
+
+    st.download_button(
+        "Download 3D STL",
+        data=exp["stl"],
+        file_name=f"{export_name}.stl",
+        mime="model/stl",
+        use_container_width=True,
+    )
+    st.download_button(
+        "Download 3D OBJ",
+        data=exp["obj"],
+        file_name=f"{export_name}.obj",
+        mime="text/plain",
+        use_container_width=True,
+    )
+    st.download_button(
+        "Download 2D SVG (top view)",
+        data=exp["svg_top"],
+        file_name=f"{export_name}_top.svg",
+        mime="image/svg+xml",
+        use_container_width=True,
+    )
+    st.download_button(
+        "Download 2D DXF (top view)",
+        data=exp["dxf_top"],
+        file_name=f"{export_name}_top.dxf",
+        mime="application/dxf",
+        use_container_width=True,
+    )
+
+    st.divider()
+    st.subheader("Configuration (JSON)")
+    st.code(exp["config_json"], language="json")
 
 
 st.divider()

@@ -2,3 +2,5 @@ streamlit
 plotly
 numpy
 pandas
+trimesh
+ezdxf

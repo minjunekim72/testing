@@ -3,8 +3,11 @@
 This repo contains a small interactive tool that lets you:
 
 - **Design a battery pack**: choose a cell spec and pack topology (S/P) and a 3D grid layout.
-- **Visualize the pack in 3D**: a schematic 3D view of cell placement and overall bounds.
+- **Visualize the pack in 3D**: schematic view or **CAD-like solid cells + enclosure**.
 - **See basic electrical properties while “in use”**: voltage/current/power/energy estimates under a constant-current discharge simulation.
+- **Export CAD-friendly files**:
+  - 3D: **STL** and **OBJ**
+  - 2D: **DXF** and **SVG** (top view)
 
 ### Quick start
 
@@ -25,6 +28,8 @@ Then open the URL Streamlit prints (usually `http://localhost:8501`).
   - `geometry.py`: 3D cell grid center generation + pack bounds
   - `simulate.py`: constant-current discharge simulation
   - `plotting.py`: Plotly 3D visualization helpers
+  - `cad.py`: solid geometry + STL/OBJ export (millimeter units)
+  - `drawings.py`: DXF/SVG 2D top-view exports
 
 ### Important limitations (read this)
 
