@@ -64,6 +64,23 @@ If you want a “double click to launch” experience on Windows:
 
 The script will create/use `.venv`, install requirements, and start the app at `http://localhost:8501`.
 
+### Troubleshooting install errors (Windows)
+
+If you see `No module named streamlit` or pip build errors, first confirm you’re installing into the venv:
+
+```bat
+.\.venv\Scripts\python.exe -m pip --version
+.\.venv\Scripts\python.exe -m pip install --upgrade pip setuptools wheel
+.\.venv\Scripts\python.exe -m pip install --prefer-binary -r requirements.txt
+```
+
+If it still fails, please share the **full pip error output** and the output of:
+
+```bat
+py -V
+py -m pip -V
+```
+
 ### How the model works (high level)
 
 - **Electrode capacity** is computed from:

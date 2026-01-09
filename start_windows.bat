@@ -35,7 +35,14 @@ if %errorlevel% neq 0 (
 )
 
 echo Installing/updating dependencies...
-python -m pip install -r requirements.txt
+python -m pip install --upgrade pip setuptools wheel
+if %errorlevel% neq 0 (
+  echo Failed to upgrade pip/setuptools/wheel.
+  pause
+  exit /b 1
+)
+
+python -m pip install --prefer-binary -r requirements.txt
 if %errorlevel% neq 0 (
   echo Failed to install dependencies.
   pause
