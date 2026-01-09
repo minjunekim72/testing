@@ -46,6 +46,7 @@ echo Could not find venv python at: %VENV_PY%
 pause
 exit /b 1
 
+:PIP_OK
 echo Installing/updating dependencies...
 "%VENV_PY%" -m pip install --upgrade pip setuptools wheel
 if not errorlevel 1 goto :REQ_OK
