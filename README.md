@@ -14,10 +14,13 @@ This is a **first-order sizing model** meant for quick iteration, not a replacem
 
 ### Quickstart
 
+**Recommended Python version**: **Python 3.12** (Windows-friendly wheels are widely available).  
+Python **3.14** on Windows may fail to install dependencies because some packages may not ship wheels yet, causing pip to try (and fail) source builds.
+
 ### Windows (PowerShell)
 
 ```powershell
-py -m venv .venv
+py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 python run.py
@@ -28,7 +31,7 @@ python run.py
 ### Windows (Command Prompt / cmd.exe)
 
 ```bat
-py -m venv .venv
+py -3.12 -m venv .venv
 .\.venv\Scripts\activate.bat
 python -m pip install -r requirements.txt
 python run.py
@@ -37,7 +40,7 @@ python run.py
 ### Windows (Git Bash / MSYS2 bash)
 
 ```bash
-py -m venv .venv
+py -3.12 -m venv .venv
 source .venv/Scripts/activate
 python -m pip install -r requirements.txt
 python run.py
