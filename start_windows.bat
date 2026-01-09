@@ -56,18 +56,20 @@ exit /b 1
 
 :REQ_OK
 "%VENV_PY%" -m pip install --prefer-binary -r requirements.txt
-if not errorlevel 1 goto :RUN_OK
+if errorlevel 1 goto :INSTALL_FAIL
+goto :START_APP
+:INSTALL_FAIL
 echo Failed to install dependencies.
 pause
 exit /b 1
 
+:START_APP
 echo Starting app...
 "%VENV_PY%" run.py
 
 :RUN_OK
-REM Keep window open if launched by double-click.
-if errorlevel 1 (
-  echo App exited with error.
-  pause
-)
+REM Keep window open if the app errors.
+if not errorlevel 1 goto :EOF
+echo App exited with error.
+pause
 
