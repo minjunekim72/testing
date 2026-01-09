@@ -10,6 +10,27 @@ from .geometry import compute_pack_bounds_mm, generate_cell_centers_mm
 from .models import CellSpec, PackConfig
 
 
+def _mesh3d_from_trimesh(mesh, *, color: str, name: str, opacity: float = 1.0) -> go.Mesh3d | None:
+    if mesh is None or (not getattr(mesh, "vertices", None) is not None):
+        return None
+    if mesh.vertices is None or mesh.faces is None or len(mesh.vertices) == 0 or len(mesh.faces) == 0:
+        return None
+    v = np.asarray(mesh.vertices)
+    f = np.asarray(mesh.faces)
+    return go.Mesh3d(
+        x=v[:, 0],
+        y=v[:, 1],
+        z=v[:, 2],
+        i=f[:, 0],
+        j=f[:, 1],
+        k=f[:, 2],
+        color=color,
+        opacity=float(opacity),
+        name=name,
+        hoverinfo="skip",
+    )
+
+
 def pack_3d_figure(cell: CellSpec, cfg: PackConfig, highlight_n: int | None = None) -> go.Figure:
     """
     Creates a lightweight 3D view (cell centers + pack bounding box).
@@ -116,6 +137,7 @@ def pack_3d_cad_figure(
     cfg: PackConfig,
     *,
     include_enclosure: bool = True,
+    enclosure_style: str = "box",
     enclosure_clearance_mm: float = 2.0,
     enclosure_wall_mm: float = 2.0,
     mesh_sections: int = 28,
@@ -129,30 +151,70 @@ def pack_3d_cad_figure(
     """
     enclosure = EnclosureSpec(
         include=bool(include_enclosure),
+        style=str(enclosure_style),
         clearance_mm=float(enclosure_clearance_mm),
         wall_mm=float(enclosure_wall_mm),
     )
     scene = build_pack_scene_mm(cell, cfg, sections=int(mesh_sections), enclosure=enclosure)
-    mesh = scene_to_mesh(scene)
 
     fig = go.Figure()
-    if mesh.vertices.size and mesh.faces.size:
-        v = mesh.vertices
-        f = mesh.faces
-        fig.add_trace(
-            go.Mesh3d(
-                x=v[:, 0],
-                y=v[:, 1],
-                z=v[:, 2],
-                i=f[:, 0],
-                j=f[:, 1],
-                k=f[:, 2],
-                opacity=0.85 if include_enclosure else 1.0,
-                color="#1f77b4",
-                name="Pack solids",
-                hoverinfo="skip",
-            )
-        )
+    # Render parts with distinct colors for a more "product-like" look.
+    if scene.geometry:
+        # Cells (concatenate for performance)
+        cell_meshes = [m for name, m in scene.geometry.items() if name.startswith("cell_")]
+        try:
+            import trimesh as _tm  # local import
+
+            if cell_meshes:
+                _s = _tm.Scene()
+                for i, m in enumerate(cell_meshes):
+                    _s.add_geometry(m, geom_name=f"c{i}")
+                cells = scene_to_mesh(_s)
+                t = _mesh3d_from_trimesh(
+                    cells,
+                    color="#1f77b4",
+                    name="Cells",
+                    opacity=0.95 if not include_enclosure else 0.65,
+                )
+                if t is not None:
+                    fig.add_trace(t)
+        except Exception:
+            pass
+
+        # Enclosure parts
+        enc_meshes = [m for name, m in scene.geometry.items() if name.startswith("enclosure_")]
+        if enc_meshes:
+            try:
+                import trimesh as _tm  # local import
+
+                _s = _tm.Scene()
+                for i, m in enumerate(enc_meshes):
+                    _s.add_geometry(m, geom_name=f"e{i}")
+                enc = scene_to_mesh(_s)
+                t = _mesh3d_from_trimesh(enc, color="rgba(210,210,210,1.0)", name="Enclosure", opacity=0.55)
+                if t is not None:
+                    fig.add_trace(t)
+            except Exception:
+                pass
+
+        # Terminals + markings (render separately for color)
+        for name, m in scene.geometry.items():
+            if name == "terminal_pos":
+                t = _mesh3d_from_trimesh(m, color="#d62728", name="Positive terminal", opacity=1.0)
+                if t is not None:
+                    fig.add_trace(t)
+            elif name == "terminal_neg":
+                t = _mesh3d_from_trimesh(m, color="#1f77b4", name="Negative terminal", opacity=1.0)
+                if t is not None:
+                    fig.add_trace(t)
+            elif name.startswith("mark_plus"):
+                t = _mesh3d_from_trimesh(m, color="#d62728", name="+", opacity=1.0)
+                if t is not None:
+                    fig.add_trace(t)
+            elif name == "mark_minus":
+                t = _mesh3d_from_trimesh(m, color="#1f77b4", name="-", opacity=1.0)
+                if t is not None:
+                    fig.add_trace(t)
 
     # Add a wireframe bounds to aid orientation
     bounds = compute_pack_bounds_mm(cell, cfg)
@@ -195,7 +257,7 @@ def pack_3d_cad_figure(
         ),
         margin=dict(l=0, r=0, t=30, b=0),
         legend=dict(orientation="h"),
-        title="Battery pack (CAD-like solids)",
+        title="Battery (CAD-like solids)",
     )
     return fig
 

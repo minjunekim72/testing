@@ -102,6 +102,7 @@ with st.sidebar:
     st.divider()
     st.header("CAD / geometry")
     view_mode = st.selectbox("3D view mode", ["CAD solids", "Schematic"], index=0)
+    enclosure_style = st.selectbox("Enclosure style", ["Battery case", "Simple box"], index=0)
     include_enclosure = st.checkbox("Include enclosure (outer block)", value=True)
     enclosure_clearance_mm = st.number_input("Enclosure clearance (mm)", 0.0, 50.0, 2.0, 0.5)
     enclosure_wall_mm = st.number_input("Enclosure wall thickness (mm)", 0.0, 50.0, 2.0, 0.5)
@@ -165,10 +166,12 @@ col_a, col_b, col_c = st.columns([1.15, 1.15, 1.0], gap="large")
 with col_a:
     st.subheader("3D pack layout")
     if view_mode == "CAD solids":
+        style_key = "battery_case" if enclosure_style == "Battery case" else "box"
         fig3d = pack_3d_cad_figure(
             cell,
             cfg,
             include_enclosure=include_enclosure,
+            enclosure_style=style_key,
             enclosure_clearance_mm=float(enclosure_clearance_mm),
             enclosure_wall_mm=float(enclosure_wall_mm),
             mesh_sections=int(mesh_sections),
@@ -225,6 +228,7 @@ with col_c:
     export_name = f"{cell.name.replace(' ', '_')}_{cfg.series_s}S{cfg.parallel_p}P"
     enclosure_spec = EnclosureSpec(
         include=bool(include_enclosure),
+        style="battery_case" if enclosure_style == "Battery case" else "box",
         clearance_mm=float(enclosure_clearance_mm),
         wall_mm=float(enclosure_wall_mm),
     )
