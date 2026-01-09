@@ -14,11 +14,33 @@ This is a **first-order sizing model** meant for quick iteration, not a replacem
 
 ### Quickstart
 
+### Windows (PowerShell)
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python run.py
+```
+
+> If activation is blocked, run: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+
+### Windows (Command Prompt / cmd.exe)
+
+```bat
+py -m venv .venv
+.\.venv\Scripts\activate.bat
+python -m pip install -r requirements.txt
+python run.py
+```
+
+### macOS / Linux
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -r requirements.txt
-python3 -m streamlit run app.py
+python3 run.py
 ```
 
 Then open the Streamlit URL printed in the terminal.
