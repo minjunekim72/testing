@@ -10,53 +10,26 @@ set "PROJECT_DIR=%~dp0"
 cd /d "%PROJECT_DIR%"
 
 REM Pick a Python launcher (prefer 'py' on Windows) and enforce a supported version.
-REM This project is known to work well on Python 3.12+.
-REM Very new Python versions (e.g. 3.14) may not have wheels for numpy/matplotlib/pyarrow yet,
-REM causing pip to attempt source builds and fail with compiler errors.
+REM Recommended: Python 3.12 (best wheel availability on Windows).
+REM Python 3.14+ often lacks wheels for numpy/matplotlib/pyarrow, leading to source builds + compiler errors.
+set "PYLAUNCH=python"
 where py >nul 2>nul
-if %errorlevel%==0 (
-  REM Prefer Python 3.12 if installed.
-  py -3.12 -c "import sys; raise SystemExit(0)" >nul 2>nul
-  if %errorlevel%==0 (
+if not errorlevel 1 (
+  REM Prefer Python 3.12 if installed; otherwise fall back to default 'py'.
+  py -3.12 -V >nul 2>nul
+  if not errorlevel 1 (
     set "PYLAUNCH=py -3.12"
   ) else (
     set "PYLAUNCH=py"
   )
-) else (
-  set "PYLAUNCH=python"
 )
 
-REM Validate Python version (require >=3.12 and <3.14 for best Windows wheel availability).
-for /f "usebackq tokens=*" %%v in (`%PYLAUNCH% -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"`) do set "PYVER=%%v"
-if "%PYVER%"=="" (
-  echo Failed to detect Python version. Ensure Python is installed.
-  pause
-  exit /b 1
-)
-
-for /f "tokens=1,2 delims=." %%a in ("%PYVER%") do (
-  set "PYMAJOR=%%a"
-  set "PYMINOR=%%b"
-)
-
-if not "%PYMAJOR%"=="3" (
-  echo Unsupported Python version: %PYVER%
-  echo Please install Python 3.12 (recommended) or 3.13 and try again.
-  pause
-  exit /b 1
-)
-
-if %PYMINOR% LSS 12 (
-  echo Unsupported Python version: %PYVER%
-  echo Please install Python 3.12 (recommended) or 3.13 and try again.
-  pause
-  exit /b 1
-)
-
-if %PYMINOR% GEQ 14 (
-  echo Python %PYVER% detected.
-  echo On Windows, pip may fail because some dependencies do not yet ship wheels for Python %PYVER%.
-  echo Please install Python 3.12 (recommended) or 3.13, then re-run this launcher.
+REM Validate version via exit code (avoid fragile string parsing).
+%PYLAUNCH% -c "import sys; sys.exit(0 if (3,12) <= sys.version_info[:2] < (3,14) else 1)" >nul 2>nul
+if errorlevel 1 (
+  echo Unsupported Python detected for Windows dependency installs.
+  echo Please install and use Python 3.12 (recommended) or 3.13, then re-run.
+  echo Tip: run `py -0p` to see installed versions.
   pause
   exit /b 1
 )
@@ -71,22 +44,22 @@ if not exist ".venv\Scripts\python.exe" (
   )
 )
 
-call ".venv\Scripts\activate.bat"
-if %errorlevel% neq 0 (
-  echo Failed to activate venv.
+set "VENV_PY=%PROJECT_DIR%.venv\Scripts\python.exe"
+if not exist "%VENV_PY%" (
+  echo Could not find venv python at: %VENV_PY%
   pause
   exit /b 1
 )
 
 echo Installing/updating dependencies...
-python -m pip install --upgrade pip setuptools wheel
+ "%VENV_PY%" -m pip install --upgrade pip setuptools wheel
 if %errorlevel% neq 0 (
   echo Failed to upgrade pip/setuptools/wheel.
   pause
   exit /b 1
 )
 
-python -m pip install --prefer-binary -r requirements.txt
+ "%VENV_PY%" -m pip install --prefer-binary -r requirements.txt
 if %errorlevel% neq 0 (
   echo Failed to install dependencies.
   pause
@@ -94,5 +67,5 @@ if %errorlevel% neq 0 (
 )
 
 echo Starting app...
-python run.py
+ "%VENV_PY%" run.py
 
